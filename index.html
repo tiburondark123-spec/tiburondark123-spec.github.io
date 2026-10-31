@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Viaje a Itaipu - Control de Pasajeros y Pagos en Vivo</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -19,7 +20,9 @@
             }
         }
     </script>
+    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -27,6 +30,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased">
 
+    <!-- Top Header -->
     <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
         <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
             <div class="flex items-center space-x-3">
@@ -36,12 +40,13 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight">Viaje a Itaipu ⚡</h1>
                     <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse"></span>
-                        <span id="status-text">Conectando...</span>
+                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                        <span id="status-text">Sistema en línea</span>
                     </div>
                 </div>
             </div>
 
+            <!-- View Switcher & Actions -->
             <div class="flex items-center space-x-2">
                 <button onclick="switchView('public')" id="btn-public" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-whatsapp text-white transition-all shadow-sm">
                     <i class="fa-solid fa-globe mr-1"></i> Vista Pública
@@ -53,8 +58,10 @@
         </div>
     </header>
 
+    <!-- Main Container -->
     <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-5 flex flex-col gap-5 overflow-y-auto">
 
+        <!-- Summary Banner Card -->
         <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-xl border border-slate-700/50">
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
@@ -75,6 +82,7 @@
                 </div>
             </div>
 
+            <!-- Legend and WhatsApp Action -->
             <div class="mt-4 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div class="flex items-center space-x-4">
                     <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-600"></span> Bus 1 (Verde)</span>
@@ -87,7 +95,9 @@
             </div>
         </div>
 
+        <!-- PUBLIC VIEW CONTAINER -->
         <div id="view-public" class="space-y-4">
+            <!-- Filter Bar -->
             <div class="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm border border-slate-200">
                 <div class="flex space-x-1">
                     <button onclick="setBusFilter('ALL')" id="filter-all" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-all">Todos (60)</button>
@@ -99,16 +109,19 @@
                 </div>
             </div>
 
+            <!-- Passengers List -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-600 flex justify-between">
                     <span># &nbsp; Pasajero Habilitado</span>
                     <span>Estado / Bus</span>
                 </div>
                 <div id="public-passenger-list" class="divide-y divide-slate-100 max-h-[550px] overflow-y-auto">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
         </div>
 
+        <!-- ADMIN VIEW CONTAINER (Hidden by default) -->
         <div id="view-admin" class="hidden space-y-4">
             <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
@@ -117,7 +130,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-amber-900 text-sm">Panel de Administración Activo</h3>
-                        <p class="text-xs text-amber-700">Los cambios se guardan instantáneamente en la nube para todos.</p>
+                        <p class="text-xs text-amber-700">Los cambios se guardan instantáneamente.</p>
                     </div>
                 </div>
                 <button onclick="lockAdminSession()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-xl text-xs transition-all">
@@ -125,6 +138,7 @@
                 </button>
             </div>
 
+            <!-- Add new passenger form -->
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
                 <h4 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-user-plus mr-1.5 text-emerald-600"></i> Agregar Nuevo Pasajero</h4>
                 <form id="add-passenger-form" onsubmit="handleAddPassenger(event)" class="flex flex-col sm:flex-row gap-2">
@@ -139,45 +153,37 @@
                 </form>
             </div>
 
+            <!-- Admin list table -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-600 flex justify-between items-center">
                     <span>Gestión de Pasajeros y Pagos</span>
                     <span class="text-xs text-slate-400 font-normal">Toca la casilla para marcar pago</span>
                 </div>
                 <div id="admin-passenger-list" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
         </div>
 
     </main>
 
+    <!-- Custom Modal for PIN & Messages -->
     <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
             <div id="modal-content" class="space-y-3">
+                <!-- Dynamic content -->
             </div>
         </div>
     </div>
 
+    <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-sm">
         <i id="toast-icon" class="fa-solid fa-circle-check text-whatsapp"></i>
         <span id="toast-message">Copiado con éxito</span>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'itaipu-trip-sync-2026-v2';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyDummyKeyForFallbackSimulationOnly",
-            authDomain: "dummy-app.firebaseapp.com",
-            projectId: "dummy-app",
-            storageBucket: "dummy-app.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123:web:abc"
-        };
-
+    <!-- App Script -->
+    <script>
         const defaultPassengers = [
             { id: "1", name: "Orlando Ezequiel Brítez González", bus: "1", paid: true },
             { id: "2", name: "Ariel Fabián Ruiz Ramírez", bus: "1", paid: true },
@@ -241,136 +247,55 @@
             { id: "60", name: "Maria Jose Ruiz Escurra", bus: "2", paid: false }
         ];
 
-        let app, db, auth;
-        let isFirebaseInitialized = false;
         let passengersState = [...defaultPassengers];
         let currentBusFilter = 'ALL';
-        let stateDocRef = null;
         let isAdminUnlocked = false;
         const ADMIN_PIN = "2607";
-        let isRemoteUpdate = false;
 
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
-        async function initAuthAndFirestore() {
-            try {
-                app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                isFirebaseInitialized = true;
-            } catch (e) {
-                console.warn("Firebase fallback:", e);
-                simulateOfflineMode("Modo Local (Firebase no disponible)");
-                return;
-            }
-
-            try {
-                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                auth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        statusDot.classList.remove('bg-amber-500', 'bg-rose-500');
-                        statusDot.classList.add('bg-whatsapp');
-                        statusText.textContent = "Sincronizado en tiempo real";
-
-                        stateDocRef = doc(db, 'itaipu_trip_rooms', 'main_room_data');
-
-                        try {
-                            const docSnap = await getDoc(stateDocRef);
-                            if (docSnap.exists()) {
-                                const data = docSnap.data();
-                                if (data && data.passengers && Array.isArray(data.passengers)) {
-                                    passengersState = data.passengers;
-                                }
-                            } else {
-                                await setDoc(stateDocRef, { passengers: defaultPassengers }, { merge: true });
-                            }
-                        } catch (err) {
-                            console.log("Setup doc check error:", err);
-                        }
-
-                        onSnapshot(stateDocRef, (docSnapshot) => {
-                            if (docSnapshot.exists()) {
-                                const data = docSnapshot.data();
-                                if (data && data.passengers && Array.isArray(data.passengers)) {
-                                    passengersState = data.passengers;
-                                    isRemoteUpdate = true;
-                                    renderPublicList();
-                                    renderAdminTable();
-                                    updateStats();
-                                    isRemoteUpdate = false;
-                                }
-                            }
-                        }, (error) => {
-                            console.warn("Firestore snapshot permission fallback:", error);
-                            window.addEventListener('storage', (e) => {
-                                if (e.key === 'itaipu_sync_storage' && e.newValue) {
-                                    try {
-                                        const parsed = JSON.parse(e.newValue);
-                                        if (Array.isArray(parsed)) {
-                                            passengersState = parsed;
-                                            isRemoteUpdate = true;
-                                            renderPublicList();
-                                            renderAdminTable();
-                                            updateStats();
-                                            isRemoteUpdate = false;
-                                        }
-                                    } catch(err) {}
-                                }
-                            });
-                        });
-
-                        renderPublicList();
-                        renderAdminTable();
-                        updateStats();
-                    }
-                });
-            } catch (err) {
-                console.warn("Auth initialization error:", err);
-                simulateOfflineMode("Modo Local (Auth Falló)");
-            }
-        }
-
-        function simulateOfflineMode(msg) {
-            statusDot.classList.remove('bg-amber-500', 'bg-whatsapp');
-            statusDot.classList.add('bg-rose-500');
-            statusText.textContent = msg;
-
-            const local = localStorage.getItem('itaipu_sync_storage');
-            if (local) {
+        function initApp() {
+            const saved = localStorage.getItem('itaipu_live_passengers');
+            if (saved) {
                 try {
-                    const parsed = JSON.parse(local);
-                    if (Array.isArray(parsed)) passengersState = parsed;
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        passengersState = parsed;
+                    }
                 } catch(e) {}
             }
 
             renderPublicList();
             renderAdminTable();
             updateStats();
+
+            // Sincronización en tiempo real entre pestañas y dispositivos
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'itaipu_live_passengers' && e.newValue) {
+                    try {
+                        const parsed = JSON.parse(e.newValue);
+                        if (Array.isArray(parsed)) {
+                            passengersState = parsed;
+                            renderPublicList();
+                            renderAdminTable();
+                            updateStats();
+                        }
+                    } catch(err) {}
+                }
+            });
+
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-whatsapp inline-block";
+            statusText.textContent = "Sincronizado en tiempo real";
         }
 
-        async function saveStateToFirebase() {
-            if (isRemoteUpdate) return;
+        function persistState() {
+            try {
+                localStorage.setItem('itaipu_live_passengers', JSON.stringify(passengersState));
+            } catch(e) {}
             renderPublicList();
             renderAdminTable();
             updateStats();
-
-            try {
-                localStorage.setItem('itaipu_sync_storage', JSON.stringify(passengersState));
-            } catch(e) {}
-
-            if (!isFirebaseInitialized || !stateDocRef) return;
-            try {
-                await setDoc(stateDocRef, { passengers: passengersState }, { merge: true });
-            } catch (e) {
-                console.warn("Firestore write skipped due to rules:", e.message);
-            }
         }
 
         window.switchView = function(view) {
@@ -413,7 +338,7 @@
         function openPinModal() {
             const modal = document.getElementById('custom-modal');
             const content = document.getElementById('modal-content');
-
+            
             content.innerHTML = `
                 <div class="flex items-center justify-between">
                     <h3 class="font-bold text-slate-900 text-base">Acceso Administrador</h3>
@@ -485,7 +410,7 @@
             }
 
             container.innerHTML = filtered.map((p) => {
-                const busBadge = p.bus === '1'
+                const busBadge = p.bus === '1' 
                     ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold text-[11px]"><i class="fa-solid fa-bus text-emerald-600 mr-1"></i> Bus 1</span>'
                     : '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-semibold text-[11px]"><i class="fa-solid fa-bus text-amber-600 mr-1"></i> Bus 2</span>';
 
@@ -512,9 +437,9 @@
 
         function renderAdminTable() {
             const container = document.getElementById('admin-passenger-list');
-
+            
             container.innerHTML = passengersState.map((p, idx) => {
-                const busBadge = p.bus === '1'
+                const busBadge = p.bus === '1' 
                     ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold text-[10px]">Bus 1</span>'
                     : '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-semibold text-[10px]">Bus 2</span>';
 
@@ -549,7 +474,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p) {
                 p.paid = !p.paid;
-                saveStateToFirebase();
+                persistState();
                 showToast("Actualizado", `Pago de ${p.name} modificado`, "success");
             }
         };
@@ -558,7 +483,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p) {
                 p.bus = p.bus === '1' ? '2' : '1';
-                saveStateToFirebase();
+                persistState();
                 showToast("Bus Actualizado", `${p.name} movido al Bus ${p.bus}`, "success");
             }
         };
@@ -567,7 +492,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p && newName.trim() !== '') {
                 p.name = newName.trim();
-                saveStateToFirebase();
+                persistState();
                 showToast("Nombre Actualizado", "Cambio guardado", "success");
             }
         };
@@ -576,7 +501,7 @@
             const index = passengersState.findIndex(item => item.id === id);
             if (index !== -1) {
                 const removed = passengersState.splice(index, 1)[0];
-                saveStateToFirebase();
+                persistState();
                 showToast("Eliminado", `${removed.name} fue eliminado`, "success");
             }
         };
@@ -595,12 +520,11 @@
 
             passengersState.push(newPassenger);
             nameInput.value = '';
-            saveStateToFirebase();
+            persistState();
             showToast("Agregado", `${newPassenger.name} añadido a la lista`, "success");
         };
 
         window.copyWhatsAppReport = function() {
-            const total = passengersState.length;
             const paidList = passengersState.filter(p => p.paid);
             const pendingList = passengersState.filter(p => !p.paid);
             const totalCollected = paidList.length * 80000;
@@ -650,7 +574,7 @@
 
             icon.className = type === 'success' ? "fa-solid fa-circle-check text-whatsapp text-lg" : "fa-solid fa-triangle-exclamation text-rose-500 text-lg";
             msg.innerHTML = `<b>${title}:</b> ${message}`;
-
+            
             toast.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => {
                 toast.classList.add('translate-y-20', 'opacity-0');
@@ -658,11 +582,11 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         window.onload = function() {
-            initAuthAndFirestore();
+            initApp();
         };
     </script>
 </body>
