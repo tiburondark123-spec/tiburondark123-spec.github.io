@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viaje a Itaipu - Control de Pasajeros y Pagos en Vivo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        whatsapp: '#25D366',
+                        'whatsapp-dark': '#128C7E',
+                        bus1: '#16a34a',
+                        bus2: '#ca8a04',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 h-full flex flex-col antialiased">
+
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-whatsapp p-2 rounded-xl text-white shadow-lg">
+                    <i class="fa-solid fa-bus text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Viaje a Itaipu ⚡</h1>
+                    <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
+                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse"></span>
+                        <span id="status-text">Conectando...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <button onclick="switchView('public')" id="btn-public" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-whatsapp text-white transition-all shadow-sm">
+                    <i class="fa-solid fa-globe mr-1"></i> Vista Pública
+                </button>
+                <button onclick="requestAdminAccess()" id="btn-admin" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all">
+                    <i class="fa-solid fa-lock mr-1"></i> Admin
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-5 flex flex-col gap-5 overflow-y-auto">
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-xl border border-slate-700/50">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span class="block text-xs uppercase tracking-wider text-slate-400 font-medium">Pasajeros</span>
+                    <span id="stat-total" class="text-2xl font-bold text-white">60</span>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span class="block text-xs uppercase tracking-wider text-emerald-400 font-medium">Pagaron (80k)</span>
+                    <span id="stat-paid" class="text-2xl font-bold text-emerald-400">0</span>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span class="block text-xs uppercase tracking-wider text-amber-400 font-medium">Faltan Pagar</span>
+                    <span id="stat-pending" class="text-2xl font-bold text-amber-400">0</span>
+                </div>
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+                    <span class="block text-xs uppercase tracking-wider text-cyan-400 font-medium">Recaudado</span>
+                    <span id="stat-collected" class="text-lg font-bold text-cyan-400 mt-0.5 block truncate">0 G.</span>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div class="flex items-center space-x-4">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-600"></span> Bus 1 (Verde)</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> Bus 2 (Amarillo)</span>
+                </div>
+                <button onclick="copyWhatsAppReport()" class="bg-whatsapp hover:bg-whatsapp-dark text-white px-4 py-2 rounded-xl font-bold shadow-lg transition-all flex items-center space-x-2 text-xs cursor-pointer ml-auto">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>Copiar Estado para WhatsApp</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="view-public" class="space-y-4">
+            <div class="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex space-x-1">
+                    <button onclick="setBusFilter('ALL')" id="filter-all" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-all">Todos (60)</button>
+                    <button onclick="setBusFilter('1')" id="filter-bus1" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">🟢 Bus 1</button>
+                    <button onclick="setBusFilter('2')" id="filter-bus2" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all">🟡 Bus 2</button>
+                </div>
+                <div class="text-xs text-slate-500 px-2 font-medium">
+                    Costo: <span class="font-bold text-slate-700">80.000 G.</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-600 flex justify-between">
+                    <span># &nbsp; Pasajero Habilitado</span>
+                    <span>Estado / Bus</span>
+                </div>
+                <div id="public-passenger-list" class="divide-y divide-slate-100 max-h-[550px] overflow-y-auto">
+                </div>
+            </div>
+        </div>
+
+        <div id="view-admin" class="hidden space-y-4">
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-amber-500 text-white p-2.5 rounded-xl shadow">
+                        <i class="fa-solid fa-user-shield text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-amber-900 text-sm">Panel de Administración Activo</h3>
+                        <p class="text-xs text-amber-700">Los cambios se guardan instantáneamente en la nube para todos.</p>
+                    </div>
+                </div>
+                <button onclick="lockAdminSession()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-xl text-xs transition-all">
+                    <i class="fa-solid fa-lock mr-1"></i> Cerrar Sesión
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <h4 class="font-bold text-slate-800 text-sm mb-3"><i class="fa-solid fa-user-plus mr-1.5 text-emerald-600"></i> Agregar Nuevo Pasajero</h4>
+                <form id="add-passenger-form" onsubmit="handleAddPassenger(event)" class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="new-name" placeholder="Nombre y apellido completo" required class="flex-grow px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                    <select id="new-bus" class="px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+                        <option value="1">Bus 1 (Verde)</option>
+                        <option value="2">Bus 2 (Amarillo)</option>
+                    </select>
+                    <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all shadow">
+                        Agregar
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-600 flex justify-between items-center">
+                    <span>Gestión de Pasajeros y Pagos</span>
+                    <span class="text-xs text-slate-400 font-normal">Toca la casilla para marcar pago</span>
+                </div>
+                <div id="admin-passenger-list" class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="custom-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <div id="modal-content" class="space-y-3">
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-sm">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-whatsapp"></i>
+        <span id="toast-message">Copiado con éxito</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'itaipu-trip-sync-2026-v2';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyDummyKeyForFallbackSimulationOnly",
+            authDomain: "dummy-app.firebaseapp.com",
+            projectId: "dummy-app",
+            storageBucket: "dummy-app.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123:web:abc"
+        };
+
+        const defaultPassengers = [
+            { id: "1", name: "Orlando Ezequiel Brítez González", bus: "1", paid: true },
+            { id: "2", name: "Ariel Fabián Ruiz Ramírez", bus: "1", paid: true },
+            { id: "3", name: "Yamila Vichini", bus: "1", paid: true },
+            { id: "4", name: "Eduardo Fabián Torres Duarte", bus: "1", paid: true },
+            { id: "5", name: "Iram Nahuel De Jesus Arenas Vefa", bus: "1", paid: true },
+            { id: "6", name: "Belén Abigail Acosta Franco", bus: "1", paid: true },
+            { id: "7", name: "Camila Luján Caniza Villalba", bus: "1", paid: true },
+            { id: "8", name: "Lisandro Jesús Ayala Ayala", bus: "1", paid: true },
+            { id: "9", name: "Danna Daylen Alegre Ruiz", bus: "1", paid: true },
+            { id: "10", name: "Magno Antonio Aguero Ferreira", bus: "1", paid: true },
+            { id: "11", name: "Alice Ailin Pereira Gaona", bus: "1", paid: true },
+            { id: "12", name: "Milagro Serafini Morales", bus: "1", paid: true },
+            { id: "13", name: "Omar Andres Franco Frutos", bus: "1", paid: true },
+            { id: "14", name: "Jorge Sebastian Gómez Villalba", bus: "1", paid: true },
+            { id: "15", name: "Jessica Andrea Báez Martínez", bus: "1", paid: true },
+            { id: "16", name: "Bruno Sebastián González Palacios", bus: "1", paid: true },
+            { id: "17", name: "Miguel Sebastian Fernandez Chamorro", bus: "1", paid: true },
+            { id: "18", name: "Cynthia Cardozo Barreto", bus: "1", paid: true },
+            { id: "19", name: "Catalina Beatriz Zaracho Domínguez", bus: "1", paid: true },
+            { id: "20", name: "Yenifer Beatriz Bordon Flores", bus: "1", paid: true },
+            { id: "21", name: "Lucas Damian Rojas Gimenez", bus: "1", paid: false },
+            { id: "22", name: "Alejandro Ramón Jara Pintos", bus: "1", paid: false },
+            { id: "23", name: "Milagros Araceli Ramirez Mendez", bus: "1", paid: false },
+            { id: "24", name: "Ivan Rodrigo Garay Sanchez", bus: "1", paid: false },
+            { id: "25", name: "Maria Jazmín Alcaráz Morinigo", bus: "1", paid: false },
+            { id: "26", name: "Brenda Arianhe Bordon Rodriguez", bus: "1", paid: false },
+            { id: "27", name: "Eliana Licet Ascurra", bus: "1", paid: false },
+            { id: "28", name: "Lujan Medina Romero", bus: "1", paid: false },
+            { id: "29", name: "Laura Camila Torales Aveiro", bus: "1", paid: false },
+            { id: "30", name: "Mariela Isabel Caballero Aquino", bus: "1", paid: false },
+            { id: "31", name: "Juan de Jesús Resquin Patiño", bus: "2", paid: false },
+            { id: "32", name: "Rodolfo David Sanabria Romero", bus: "2", paid: true },
+            { id: "33", name: "Analia Monserrath Medina Rojas", bus: "2", paid: false },
+            { id: "34", name: "Dhara Pamela Aguilera Jourdan", bus: "2", paid: false },
+            { id: "35", name: "Tania Romina Bogado Colman", bus: "2", paid: false },
+            { id: "36", name: "Alma Maria Alfonso Samaniego", bus: "2", paid: true },
+            { id: "37", name: "Mahia Lujan Garcia Gutiérrez", bus: "2", paid: false },
+            { id: "38", name: "Stiben David Marecos Garay", bus: "2", paid: true },
+            { id: "39", name: "Alejandro Nicolás López Barreto", bus: "2", paid: false },
+            { id: "40", name: "Thiago Sebastián Ortiz Cáceres", bus: "2", paid: false },
+            { id: "41", name: "Jennifer Paola Lopez Vallejo", bus: "2", paid: true },
+            { id: "42", name: "Sofía Eileén Ibarrola Brítez", bus: "2", paid: true },
+            { id: "43", name: "Yanina Aylen Martínez Narváez", bus: "2", paid: false },
+            { id: "44", name: "Alan David Alcaraz Galeano", bus: "2", paid: false },
+            { id: "45", name: "Luz Marina Marín Cabral", bus: "2", paid: false },
+            { id: "46", name: "Tobias Lorenzo Rolon Ibarra", bus: "2", paid: false },
+            { id: "47", name: "Santiago Javier Centurión Corvalan", bus: "2", paid: false },
+            { id: "48", name: "Lisandra Carolina Fernández González", bus: "2", paid: false },
+            { id: "49", name: "Pedro Damian Riquelme Ramirez", bus: "2", paid: true },
+            { id: "50", name: "Danilo Adrian Rojas Villasanti", bus: "2", paid: false },
+            { id: "51", name: "Ximena Luján Cabral Schramm", bus: "2", paid: false },
+            { id: "52", name: "Yamilatt Ozuna", bus: "2", paid: true },
+            { id: "53", name: "Tomas Caporal", bus: "2", paid: false },
+            { id: "54", name: "Gabriela Luján Villalba Rodríguez", bus: "2", paid: false },
+            { id: "55", name: "Yanina Mareco Miranda", bus: "2", paid: true },
+            { id: "56", name: "María Luján Rodríguez Nuñez", bus: "2", paid: false },
+            { id: "57", name: "Marta Beatriz Roca Cabrera", bus: "2", paid: false },
+            { id: "58", name: "Sara Gabriela Cabrera Aranda", bus: "2", paid: true },
+            { id: "59", name: "Jonathan Junior Osorio", bus: "2", paid: false },
+            { id: "60", name: "Maria Jose Ruiz Escurra", bus: "2", paid: false }
+        ];
+
+        let app, db, auth;
+        let isFirebaseInitialized = false;
+        let passengersState = [...defaultPassengers];
+        let currentBusFilter = 'ALL';
+        let stateDocRef = null;
+        let isAdminUnlocked = false;
+        const ADMIN_PIN = "2607";
+        let isRemoteUpdate = false;
+
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        async function initAuthAndFirestore() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                isFirebaseInitialized = true;
+            } catch (e) {
+                console.warn("Firebase fallback:", e);
+                simulateOfflineMode("Modo Local (Firebase no disponible)");
+                return;
+            }
+
+            try {
+                const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        statusDot.classList.remove('bg-amber-500', 'bg-rose-500');
+                        statusDot.classList.add('bg-whatsapp');
+                        statusText.textContent = "Sincronizado en tiempo real";
+
+                        stateDocRef = doc(db, 'itaipu_trip_rooms', 'main_room_data');
+
+                        try {
+                            const docSnap = await getDoc(stateDocRef);
+                            if (docSnap.exists()) {
+                                const data = docSnap.data();
+                                if (data && data.passengers && Array.isArray(data.passengers)) {
+                                    passengersState = data.passengers;
+                                }
+                            } else {
+                                await setDoc(stateDocRef, { passengers: defaultPassengers }, { merge: true });
+                            }
+                        } catch (err) {
+                            console.log("Setup doc check error:", err);
+                        }
+
+                        onSnapshot(stateDocRef, (docSnapshot) => {
+                            if (docSnapshot.exists()) {
+                                const data = docSnapshot.data();
+                                if (data && data.passengers && Array.isArray(data.passengers)) {
+                                    passengersState = data.passengers;
+                                    isRemoteUpdate = true;
+                                    renderPublicList();
+                                    renderAdminTable();
+                                    updateStats();
+                                    isRemoteUpdate = false;
+                                }
+                            }
+                        }, (error) => {
+                            console.warn("Firestore snapshot permission fallback:", error);
+                            window.addEventListener('storage', (e) => {
+                                if (e.key === 'itaipu_sync_storage' && e.newValue) {
+                                    try {
+                                        const parsed = JSON.parse(e.newValue);
+                                        if (Array.isArray(parsed)) {
+                                            passengersState = parsed;
+                                            isRemoteUpdate = true;
+                                            renderPublicList();
+                                            renderAdminTable();
+                                            updateStats();
+                                            isRemoteUpdate = false;
+                                        }
+                                    } catch(err) {}
+                                }
+                            });
+                        });
+
+                        renderPublicList();
+                        renderAdminTable();
+                        updateStats();
+                    }
+                });
+            } catch (err) {
+                console.warn("Auth initialization error:", err);
+                simulateOfflineMode("Modo Local (Auth Falló)");
+            }
+        }
+
+        function simulateOfflineMode(msg) {
+            statusDot.classList.remove('bg-amber-500', 'bg-whatsapp');
+            statusDot.classList.add('bg-rose-500');
+            statusText.textContent = msg;
+
+            const local = localStorage.getItem('itaipu_sync_storage');
+            if (local) {
+                try {
+                    const parsed = JSON.parse(local);
+                    if (Array.isArray(parsed)) passengersState = parsed;
+                } catch(e) {}
+            }
+
+            renderPublicList();
+            renderAdminTable();
+            updateStats();
+        }
+
+        async function saveStateToFirebase() {
+            if (isRemoteUpdate) return;
+            renderPublicList();
+            renderAdminTable();
+            updateStats();
+
+            try {
+                localStorage.setItem('itaipu_sync_storage', JSON.stringify(passengersState));
+            } catch(e) {}
+
+            if (!isFirebaseInitialized || !stateDocRef) return;
+            try {
+                await setDoc(stateDocRef, { passengers: passengersState }, { merge: true });
+            } catch (e) {
+                console.warn("Firestore write skipped due to rules:", e.message);
+            }
+        }
+
+        window.switchView = function(view) {
+            const pubView = document.getElementById('view-public');
+            const admView = document.getElementById('view-admin');
+            const btnPub = document.getElementById('btn-public');
+            const btnAdm = document.getElementById('btn-admin');
+
+            if (view === 'public') {
+                pubView.classList.remove('hidden');
+                admView.classList.add('hidden');
+                btnPub.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-whatsapp text-white transition-all shadow-sm";
+                btnAdm.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all";
+            } else {
+                if (!isAdminUnlocked) {
+                    openPinModal();
+                    return;
+                }
+                pubView.classList.add('hidden');
+                admView.classList.remove('hidden');
+                btnAdm.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 text-slate-900 font-bold transition-all shadow-sm";
+                btnPub.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all";
+            }
+        };
+
+        window.requestAdminAccess = function() {
+            if (isAdminUnlocked) {
+                window.switchView('admin');
+            } else {
+                openPinModal();
+            }
+        };
+
+        window.lockAdminSession = function() {
+            isAdminUnlocked = false;
+            window.switchView('public');
+            showToast("Sesión cerrada", "Has salido del panel de administración", "success");
+        };
+
+        function openPinModal() {
+            const modal = document.getElementById('custom-modal');
+            const content = document.getElementById('modal-content');
+
+            content.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-900 text-base">Acceso Administrador</h3>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                <p class="text-xs text-slate-500">Introduce el PIN de seguridad para gestionar pagos y pasajeros:</p>
+                <form onsubmit="verifyPin(event)" class="space-y-3 pt-2">
+                    <input type="password" id="pin-input" placeholder="PIN de 4 dígitos" autofocus maxlength="4" class="w-full text-center tracking-widest text-lg px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 font-bold">
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-all shadow">
+                        Ingresar
+                    </button>
+                </form>
+            `;
+            modal.classList.remove('hidden');
+            setTimeout(() => document.getElementById('pin-input')?.focus(), 100);
+        }
+
+        window.verifyPin = function(e) {
+            e.preventDefault();
+            const val = document.getElementById('pin-input').value;
+            if (val === ADMIN_PIN) {
+                isAdminUnlocked = true;
+                closeModal();
+                window.switchView('admin');
+                showToast("¡Acceso concedido!", "Bienvenido al panel de admin", "success");
+            } else {
+                showToast("PIN Incorrecto", "Código no válido", "error");
+                document.getElementById('pin-input').value = "";
+                document.getElementById('pin-input').focus();
+            }
+        };
+
+        window.closeModal = function() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        };
+
+        window.setBusFilter = function(bus) {
+            currentBusFilter = bus;
+            const btnAll = document.getElementById('filter-all');
+            const btnB1 = document.getElementById('filter-bus1');
+            const btnB2 = document.getElementById('filter-bus2');
+
+            btnAll.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all " + (bus === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200');
+            btnB1.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all " + (bus === '1' ? 'bg-bus1 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200');
+            btnB2.className = "px-3 py-1.5 text-xs font-semibold rounded-lg transition-all " + (bus === '2' ? 'bg-bus2 text-white font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200');
+
+            renderPublicList();
+        };
+
+        function updateStats() {
+            const total = passengersState.length;
+            const paidCount = passengersState.filter(p => p.paid).length;
+            const pendingCount = total - paidCount;
+            const collected = paidCount * 80000;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-paid').textContent = paidCount;
+            document.getElementById('stat-pending').textContent = pendingCount;
+            document.getElementById('stat-collected').textContent = collected.toLocaleString('es-PY') + " G.";
+        }
+
+        function renderPublicList() {
+            const container = document.getElementById('public-passenger-list');
+            const filtered = passengersState.filter(p => currentBusFilter === 'ALL' || p.bus === currentBusFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="p-6 text-center text-slate-400 text-sm">No hay pasajeros en este filtro.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((p) => {
+                const busBadge = p.bus === '1'
+                    ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold text-[11px]"><i class="fa-solid fa-bus text-emerald-600 mr-1"></i> Bus 1</span>'
+                    : '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-semibold text-[11px]"><i class="fa-solid fa-bus text-amber-600 mr-1"></i> Bus 2</span>';
+
+                const statusBadge = p.paid
+                    ? '<span class="bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs"><i class="fa-solid fa-check mr-1"></i> 80.000 G. (Pagado)</span>'
+                    : '<span class="bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200">Pendiente (80k)</span>';
+
+                const originalIndex = passengersState.findIndex(item => item.id === p.id) + 1;
+
+                return `
+                    <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50/80 transition-colors">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs font-bold text-slate-400 w-6 text-right">${originalIndex}.</span>
+                            <div>
+                                <h5 class="text-sm font-semibold text-slate-800">${escapeHtml(p.name)}</h5>
+                                <div class="mt-0.5">${busBadge}</div>
+                            </div>
+                        </div>
+                        <div>${statusBadge}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAdminTable() {
+            const container = document.getElementById('admin-passenger-list');
+
+            container.innerHTML = passengersState.map((p, idx) => {
+                const busBadge = p.bus === '1'
+                    ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold text-[10px]">Bus 1</span>'
+                    : '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-semibold text-[10px]">Bus 2</span>';
+
+                return `
+                    <div class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors gap-2">
+                        <div class="flex items-center space-x-3 flex-grow">
+                            <span class="text-xs font-bold text-slate-400 w-6">${idx + 1}.</span>
+                            <div class="flex-grow">
+                                <input type="text" value="${escapeHtml(p.name)}" onchange="handleNameChange('${p.id}', this.value)" class="w-full text-sm font-medium text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-slate-900 focus:outline-none py-0.5">
+                                <div class="flex items-center space-x-2 mt-1">
+                                    ${busBadge}
+                                    <button onclick="toggleBus('${p.id}')" class="text-[11px] text-indigo-600 hover:underline font-medium">Cambiar bus</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" ${p.paid ? 'checked' : ''} onchange="togglePaid('${p.id}')" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                <span class="ml-2 text-xs font-semibold ${p.paid ? 'text-emerald-700' : 'text-slate-500'}">${p.paid ? 'Pagado' : 'Pendiente'}</span>
+                            </label>
+                            <button onclick="deletePassenger('${p.id}')" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg transition-colors" title="Eliminar">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.togglePaid = function(id) {
+            const p = passengersState.find(item => item.id === id);
+            if (p) {
+                p.paid = !p.paid;
+                saveStateToFirebase();
+                showToast("Actualizado", `Pago de ${p.name} modificado`, "success");
+            }
+        };
+
+        window.toggleBus = function(id) {
+            const p = passengersState.find(item => item.id === id);
+            if (p) {
+                p.bus = p.bus === '1' ? '2' : '1';
+                saveStateToFirebase();
+                showToast("Bus Actualizado", `${p.name} movido al Bus ${p.bus}`, "success");
+            }
+        };
+
+        window.handleNameChange = function(id, newName) {
+            const p = passengersState.find(item => item.id === id);
+            if (p && newName.trim() !== '') {
+                p.name = newName.trim();
+                saveStateToFirebase();
+                showToast("Nombre Actualizado", "Cambio guardado", "success");
+            }
+        };
+
+        window.deletePassenger = function(id) {
+            const index = passengersState.findIndex(item => item.id === id);
+            if (index !== -1) {
+                const removed = passengersState.splice(index, 1)[0];
+                saveStateToFirebase();
+                showToast("Eliminado", `${removed.name} fue eliminado`, "success");
+            }
+        };
+
+        window.handleAddPassenger = function(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('new-name');
+            const busSelect = document.getElementById('new-bus');
+
+            const newPassenger = {
+                id: Date.now().toString(),
+                name: nameInput.value.trim(),
+                bus: busSelect.value,
+                paid: false
+            };
+
+            passengersState.push(newPassenger);
+            nameInput.value = '';
+            saveStateToFirebase();
+            showToast("Agregado", `${newPassenger.name} añadido a la lista`, "success");
+        };
+
+        window.copyWhatsAppReport = function() {
+            const total = passengersState.length;
+            const paidList = passengersState.filter(p => p.paid);
+            const pendingList = passengersState.filter(p => !p.paid);
+            const totalCollected = paidList.length * 80000;
+
+            let text = `🚌 *VIAJE A ITAIPU - CONTROL DE PAGOS* ⚡\n\n`;
+            text += `🟢 *Bus 1:* ${passengersState.filter(p => p.bus === '1').length} pasajeros\n`;
+            text += `🟡 *Bus 2:* ${passengersState.filter(p => p.bus === '2').length} pasajeros\n`;
+            text += `💰 *Pago Total por persona:* G. 80.000\n`;
+            text += `💵 *Total Recaudado:* ${totalCollected.toLocaleString('es-PY')} G. (${paidList.length} pagaron, ${pendingList.length} pendientes)\n\n`;
+
+            text += `*LISTA DE PASAJEROS Y ESTADOS*\n\n`;
+            passengersState.forEach((p, idx) => {
+                const busIcon = p.bus === '1' ? '🟢' : '🟡';
+                const statusIcon = p.paid ? '✅ 80.000 G.' : '⏳ Pendiente';
+                text += `${idx + 1}. ${busIcon} ${p.name} - ${statusIcon}\n`;
+            });
+
+            text += `\n🔗 *Ver lista en tiempo real:* ${window.location.href}`;
+
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showToast("¡Copiado para WhatsApp!", "Pega el reporte en tu grupo", "success");
+                } else {
+                    showToast("Error", "No se pudo copiar automáticamente", "error");
+                }
+            } catch (err) {
+                showToast("Error", "No se pudo copiar el texto", "error");
+            }
+            document.body.removeChild(textArea);
+        };
+
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+
+            icon.className = type === 'success' ? "fa-solid fa-circle-check text-whatsapp text-lg" : "fa-solid fa-triangle-exclamation text-rose-500 text-lg";
+            msg.innerHTML = `<b>${title}:</b> ${message}`;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.onload = function() {
+            initAuthAndFirestore();
+        };
+    </script>
+</body>
+</html>
