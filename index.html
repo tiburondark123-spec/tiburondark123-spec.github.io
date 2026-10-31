@@ -42,7 +42,7 @@
                     <h1 class="font-bold text-lg leading-tight">Viaje a Itaipu ⚡</h1>
                     <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
                         <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-whatsapp inline-block animate-pulse"></span>
-                        <span id="status-text">Sincronización en vivo activa</span>
+                        <span id="status-text">Sistema Oficial en Línea</span>
                     </div>
                 </div>
             </div>
@@ -131,7 +131,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-amber-900 text-sm">Panel de Administración Activo</h3>
-                        <p class="text-xs text-amber-700">Los cambios se guardan y sincronizan al instante.</p>
+                        <p class="text-xs text-amber-700">Modifica los pagos y se reflejará al instante.</p>
                     </div>
                 </div>
                 <button onclick="lockAdminSession()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-xl text-xs transition-all">
@@ -183,9 +183,9 @@
         <span id="toast-message">Copiado con éxito</span>
     </div>
 
-    <!-- Script con Sincronización Automática Global -->
+    <!-- Script Oficial con Lista Real Actualizada -->
     <script>
-        const initialPassengers = [
+        const officialPassengers = [
             { id: "1", name: "Orlando Ezequiel Brítez González", bus: "1", paid: true },
             { id: "2", name: "Ariel Fabián Ruiz Ramírez", bus: "1", paid: false },
             { id: "3", name: "Yamila Vichini", bus: "1", paid: true },
@@ -248,29 +248,31 @@
             { id: "60", name: "Maria Jose Ruiz Escurra", bus: "2", paid: false }
         ];
 
-        let passengersState = [...initialPassengers];
+        let passengersState = [...officialPassengers];
         let currentBusFilter = 'ALL';
         let isAdminUnlocked = false;
         const ADMIN_PIN = "2607";
-        const STORAGE_KEY = "itaipu_trip_shared_data_v8";
+        const STORAGE_KEY = "itaipu_trip_official_db_v9";
 
-        // Cargar datos sincronizados
         function loadData() {
             try {
-                const cloudSaved = localStorage.getItem(STORAGE_KEY);
-                if (cloudSaved) {
-                    const parsed = JSON.parse(cloudSaved);
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         passengersState = parsed;
                     }
+                } else {
+                    passengersState = [...officialPassengers];
                 }
-            } catch(e) {}
+            } catch(e) {
+                passengersState = [...officialPassengers];
+            }
             renderPublicList();
             renderAdminTable();
             updateStats();
         }
 
-        // Guardar y propagar cambios al instante
         function saveData() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(passengersState));
@@ -281,7 +283,6 @@
             updateStats();
         }
 
-        // Escucha cambios globales en tiempo real entre cualquier dispositivo
         window.addEventListener('storage', (e) => {
             if (e.key && e.key.startsWith(STORAGE_KEY)) {
                 loadData();
@@ -532,7 +533,7 @@
                 text += `${idx + 1}. ${busIcon} ${p.name} - ${statusIcon}\n`;
             });
 
-            text += `\n🔗 *Ver lista en tiempo real:* https://tiburondark123-spec.github.io/?v=8`;
+            text += `\n🔗 *Ver lista en tiempo real:* https://tiburondark123-spec.github.io/?v=9`;
 
             const textArea = document.createElement("textarea");
             textArea.value = text;
@@ -573,9 +574,7 @@
 
         window.onload = function() {
             loadData();
-            // Comprobación automática cada 2 segundos para actualizar la pantalla sin recargar
             setInterval(loadData, 2000);
         };
     </script>
 </body>
-</html>
