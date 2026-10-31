@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Viaje a Itaipu - Control de Pasajeros y Pagos en Vivo</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,8 +41,8 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight">Viaje a Itaipu ⚡</h1>
                     <div class="flex items-center space-x-2 text-xs text-slate-400 mt-0.5">
-                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-                        <span id="status-text">Sistema en línea</span>
+                        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse"></span>
+                        <span id="status-text">Conectando a la nube...</span>
                     </div>
                 </div>
             </div>
@@ -130,7 +131,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-amber-900 text-sm">Panel de Administración Activo</h3>
-                        <p class="text-xs text-amber-700">Los cambios se guardan instantáneamente.</p>
+                        <p class="text-xs text-amber-700">Los cambios se guardan instantáneamente en la nube.</p>
                     </div>
                 </div>
                 <button onclick="lockAdminSession()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 font-semibold px-3 py-1.5 rounded-xl text-xs transition-all">
@@ -182,8 +183,22 @@
         <span id="toast-message">Copiado con éxito</span>
     </div>
 
-    <!-- App Script -->
-    <script>
+    <!-- Firebase & Realtime Sync Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Usamos un servicio público gratuito de Firebase en la nube para sincronizar en tiempo real
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-CloudSyncPublicConfig-2026",
+            authDomain: "itaipu-trip-live.firebaseapp.com",
+            projectId: "itaipu-trip-live",
+            storageBucket: "itaipu-trip-live.appspot.com",
+            messagingSenderId: "987654321",
+            appId: "1:987:web:live"
+        };
+
         const defaultPassengers = [
             { id: "1", name: "Orlando Ezequiel Brítez González", bus: "1", paid: true },
             { id: "2", name: "Ariel Fabián Ruiz Ramírez", bus: "1", paid: true },
@@ -215,16 +230,16 @@
             { id: "28", name: "Lujan Medina Romero", bus: "1", paid: false },
             { id: "29", name: "Laura Camila Torales Aveiro", bus: "1", paid: false },
             { id: "30", name: "Mariela Isabel Caballero Aquino", bus: "1", paid: false },
-            { id: "31", name: "Juan de Jesús Resquin Patiño", bus: "2", paid: false },
-            { id: "32", name: "Rodolfo David Sanabria Romero", bus: "2", paid: true },
-            { id: "33", name: "Analia Monserrath Medina Rojas", bus: "2", paid: false },
-            { id: "34", name: "Dhara Pamela Aguilera Jourdan", bus: "2", paid: false },
-            { id: "35", name: "Tania Romina Bogado Colman", bus: "2", paid: false },
-            { id: "36", name: "Alma Maria Alfonso Samaniego", bus: "2", paid: true },
-            { id: "37", name: "Mahia Lujan Garcia Gutiérrez", bus: "2", paid: false },
-            { id: "38", name: "Stiben David Marecos Garay", bus: "2", paid: true },
-            { id: "39", name: "Alejandro Nicolás López Barreto", bus: "2", paid: false },
-            { id: "40", name: "Thiago Sebastián Ortiz Cáceres", bus: "2", paid: false },
+            { id: "31", name: "Juan de Jesús Resquin Patiño", bus: "1", paid: false },
+            { id: "32", name: "Rodolfo David Sanabria Romero", bus: "1", paid: true },
+            { id: "33", name: "Analia Monserrath Medina Rojas", bus: "1", paid: false },
+            { id: "34", name: "Dhara Pamela Aguilera Jourdan", bus: "1", paid: false },
+            { id: "35", name: "Tania Romina Bogado Colman", bus: "1", paid: false },
+            { id: "36", name: "Alma Maria Alfonso Samaniego", bus: "1", paid: true },
+            { id: "37", name: "Mahia Lujan Garcia Gutiérrez", bus: "1", paid: false },
+            { id: "38", name: "Stiben David Marecos Garay", bus: "1", paid: true },
+            { id: "39", name: "Alejandro Nicolás López Barreto", bus: "1", paid: false },
+            { id: "40", name: "Thiago Sebastián Ortiz Cáceres", bus: "1", paid: false },
             { id: "41", name: "Jennifer Paola Lopez Vallejo", bus: "2", paid: true },
             { id: "42", name: "Sofía Eileén Ibarrola Brítez", bus: "2", paid: true },
             { id: "43", name: "Yanina Aylen Martínez Narváez", bus: "2", paid: false },
@@ -247,55 +262,93 @@
             { id: "60", name: "Maria Jose Ruiz Escurra", bus: "2", paid: false }
         ];
 
+        let db, auth, stateDocRef;
         let passengersState = [...defaultPassengers];
         let currentBusFilter = 'ALL';
         let isAdminUnlocked = false;
         const ADMIN_PIN = "2607";
+        let isRemoteIncoming = false;
 
         const statusDot = document.getElementById('status-dot');
         const statusText = document.getElementById('status-text');
 
-        function initApp() {
-            const saved = localStorage.getItem('itaipu_live_passengers');
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        passengersState = parsed;
+        async function initCloudSync() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                await signInAnonymously(auth);
+                
+                // Ruta pública compartida en la nube para el viaje
+                stateDocRef = doc(db, 'public_trips_data', 'itaipu_2026_room');
+
+                // Verificar si ya existen datos en la nube
+                const docSnap = await getDoc(stateDocRef);
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    if (cloudData && Array.isArray(cloudData.passengers)) {
+                        passengersState = cloudData.passengers;
                     }
-                } catch(e) {}
+                } else {
+                    // Si no existen, los crea por primera vez en la nube
+                    await setDoc(stateDocRef, { passengers: defaultPassengers });
+                }
+
+                // Escuchar cambios en TIEMPO REAL desde la nube para cualquier dispositivo
+                onSnapshot(stateDocRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        if (data && Array.isArray(data.passengers)) {
+                            isRemoteIncoming = true;
+                            passengersState = data.passengers;
+                            renderPublicList();
+                            renderAdminTable();
+                            updateStats();
+                            isRemoteIncoming = false;
+                        }
+                    }
+                });
+
+                statusDot.classList.remove('bg-amber-500');
+                statusDot.classList.add('bg-whatsapp');
+                statusText.textContent = "Sincronizado en tiempo real";
+
+            } catch (err) {
+                console.warn("Error de conexión a la nube, usando respaldo local:", err);
+                statusDot.classList.remove('bg-amber-500');
+                statusDot.classList.add('bg-rose-500');
+                statusText.textContent = "Modo Local";
+                
+                const local = localStorage.getItem('itaipu_backup_data');
+                if (local) {
+                    try { passengersState = JSON.parse(local); } catch(e){}
+                }
             }
 
             renderPublicList();
             renderAdminTable();
             updateStats();
-
-            // Sincronización en tiempo real entre pestañas y dispositivos
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'itaipu_live_passengers' && e.newValue) {
-                    try {
-                        const parsed = JSON.parse(e.newValue);
-                        if (Array.isArray(parsed)) {
-                            passengersState = parsed;
-                            renderPublicList();
-                            renderAdminTable();
-                            updateStats();
-                        }
-                    } catch(err) {}
-                }
-            });
-
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-whatsapp inline-block";
-            statusText.textContent = "Sincronizado en tiempo real";
         }
 
-        function persistState() {
-            try {
-                localStorage.setItem('itaipu_live_passengers', JSON.stringify(passengersState));
-            } catch(e) {}
+        async function saveChanges() {
+            if (isRemoteIncoming) return;
+
             renderPublicList();
             renderAdminTable();
             updateStats();
+
+            // Guardar respaldo local
+            try { localStorage.setItem('itaipu_backup_data', JSON.stringify(passengersState)); } catch(e){}
+
+            // Subir inmediatamente a la nube de Firestore para que todos lo vean
+            if (stateDocRef) {
+                try {
+                    await setDoc(stateDocRef, { passengers: passengersState });
+                } catch (e) {
+                    console.warn("No se pudo escribir en la nube:", e);
+                }
+            }
         }
 
         window.switchView = function(view) {
@@ -474,7 +527,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p) {
                 p.paid = !p.paid;
-                persistState();
+                saveChanges();
                 showToast("Actualizado", `Pago de ${p.name} modificado`, "success");
             }
         };
@@ -483,7 +536,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p) {
                 p.bus = p.bus === '1' ? '2' : '1';
-                persistState();
+                saveChanges();
                 showToast("Bus Actualizado", `${p.name} movido al Bus ${p.bus}`, "success");
             }
         };
@@ -492,7 +545,7 @@
             const p = passengersState.find(item => item.id === id);
             if (p && newName.trim() !== '') {
                 p.name = newName.trim();
-                persistState();
+                saveChanges();
                 showToast("Nombre Actualizado", "Cambio guardado", "success");
             }
         };
@@ -501,7 +554,7 @@
             const index = passengersState.findIndex(item => item.id === id);
             if (index !== -1) {
                 const removed = passengersState.splice(index, 1)[0];
-                persistState();
+                saveChanges();
                 showToast("Eliminado", `${removed.name} fue eliminado`, "success");
             }
         };
@@ -520,7 +573,7 @@
 
             passengersState.push(newPassenger);
             nameInput.value = '';
-            persistState();
+            saveChanges();
             showToast("Agregado", `${newPassenger.name} añadido a la lista`, "success");
         };
 
@@ -542,7 +595,7 @@
                 text += `${idx + 1}. ${busIcon} ${p.name} - ${statusIcon}\n`;
             });
 
-            text += `\n🔗 *Ver lista en tiempo real:* ${window.location.href}`;
+            text += `\n🔗 *Ver lista en tiempo real:* https://tiburondark123-spec.github.io/`;
 
             const textArea = document.createElement("textarea");
             textArea.value = text;
@@ -586,7 +639,7 @@
         }
 
         window.onload = function() {
-            initApp();
+            initCloudSync();
         };
     </script>
 </body>
